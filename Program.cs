@@ -12,7 +12,7 @@ namespace dynamo_leaderboard_example
     class Program
     {
         private static Random random = new Random();
-        private static readonly string[] GameTitles = { "Football", "Basketball", "Baseball", "Hockey" };
+        private static readonly string[] GameTitles = { "Super Mario Bros", "Donkey Kong", "Legend of Zelda", "Tetris" };
 
         static void Main(string[] args)
         {
@@ -31,10 +31,16 @@ namespace dynamo_leaderboard_example
             if (populateTable)
                 PopulateDbWithTestData(table);
 
-            GetAllHighScoresForUser("PFZE", client);
-            GetHighScoreForUserAndGame("PFZE", "Football", client);
-            GetHighScoreForGame("Basketball", client);
-            GetMostRecentHighScoreForUser("PFZE", client);
+            // replace user after you populate your DB with random data
+            string userToQuery = "UQXK";
+            // query with partition key
+            GetAllHighScoresForUser(userToQuery, client);
+            // query with partition and sort key
+            GetHighScoreForUserAndGame(userToQuery, "Tetris", client);
+            // query against local secondary index
+            GetMostRecentHighScoreForUser(userToQuery, client);
+            // query against global secondary index
+            GetHighScoreForGame("Legend of Zelda", client);
         }
 
         static void GetAllHighScoresForUser(string user, AmazonDynamoDBClient client)
@@ -72,29 +78,6 @@ namespace dynamo_leaderboard_example
             PrintResults(response.Items);
         }
 
-        static void GetHighScoreForGame(string game, AmazonDynamoDBClient client)
-        {
-            Console.WriteLine("GetHighScoreForGame");
-            // query using Global Secondary Index 
-            // partition key is GameTitle and sort key is TopScore
-            // note we specify indexName in the query
-            // ScanIndexForward is false so results are descending
-            // and Limit is 1 so we only get the single high score back
-            var request = new QueryRequest
-            {
-                TableName = "HighScores",
-                IndexName = "GameTitleIndex",
-                KeyConditionExpression = "GameTitle = :v_Game",
-                ExpressionAttributeValues = new Dictionary<string, AttributeValue> {
-                                 { ":v_Game", new AttributeValue { S = game }},
-                             },
-                ScanIndexForward = false,
-                Limit = 1
-            };
-            var response = client.QueryAsync(request).Result;
-            PrintResults(response.Items);
-        }
-
         static void GetMostRecentHighScoreForUser(string user, AmazonDynamoDBClient client)
         {
             Console.WriteLine("GetMostRecentHighScoreForUser");
@@ -116,6 +99,29 @@ namespace dynamo_leaderboard_example
             };
             var response = client.QueryAsync(request).Result;
             PrintResults(response.Items, true);
+        }
+
+        static void GetHighScoreForGame(string game, AmazonDynamoDBClient client)
+        {
+            Console.WriteLine("GetHighScoreForGame");
+            // query using Global Secondary Index 
+            // partition key is GameTitle and sort key is TopScore
+            // note we specify indexName in the query
+            // ScanIndexForward is false so results are descending
+            // and Limit is 1 so we only get the single high score back
+            var request = new QueryRequest
+            {
+                TableName = "HighScores",
+                IndexName = "GameTitleIndex",
+                KeyConditionExpression = "GameTitle = :v_Game",
+                ExpressionAttributeValues = new Dictionary<string, AttributeValue> {
+                                 { ":v_Game", new AttributeValue { S = game }},
+                             },
+                ScanIndexForward = false,
+                Limit = 1
+            };
+            var response = client.QueryAsync(request).Result;
+            PrintResults(response.Items);
         }
 
         static void PopulateDbWithTestData(Table table)
