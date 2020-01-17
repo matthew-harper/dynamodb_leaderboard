@@ -12,7 +12,7 @@ namespace dynamo_leaderboard_example
     class Program
     {
         private static Random random = new Random();
-        private static readonly string[] GameTitles = { "Super Mario Bros", "Donkey Kong", "Legend of Zelda", "Tetris" };
+        private static readonly string[] Games = { "Super Mario Bros", "Donkey Kong", "Legend of Zelda", "Tetris" };
 
         static void Main(string[] args)
         {
@@ -32,7 +32,7 @@ namespace dynamo_leaderboard_example
                 PopulateDbWithTestData(table);
 
             // replace user after you populate your DB with random data
-            string userToQuery = "UQXK";
+            string userToQuery = "CFGV";
             // query with partition key
             GetAllHighScoresForUser(userToQuery, client);
             // query with partition and sort key
@@ -46,11 +46,11 @@ namespace dynamo_leaderboard_example
         static void GetAllHighScoresForUser(string user, AmazonDynamoDBClient client)
         {
             Console.WriteLine("GetAllHighScoresForUser");
-            // query only using partition key (UserId)
+            // query only using partition key (Username)
             var request = new QueryRequest
             {
                 TableName = "HighScores",
-                KeyConditionExpression = "UserId = :v_Id",
+                KeyConditionExpression = "Username = :v_Id",
                 ExpressionAttributeValues = new Dictionary<string, AttributeValue> {
                                  { ":v_Id", new AttributeValue { S = user } }
                              },
@@ -63,11 +63,11 @@ namespace dynamo_leaderboard_example
         static void GetHighScoreForUserAndGame(string user, string game, AmazonDynamoDBClient client)
         {
             Console.WriteLine("GetHighScoreForUserAndGame");
-            // query using partition and sort keys (UserId & GameTitle)
+            // query using partition and sort keys (Username & Game)
             var request = new QueryRequest
             {
                 TableName = "HighScores",
-                KeyConditionExpression = "UserId = :v_Id and GameTitle = :v_Game",
+                KeyConditionExpression = "Username = :v_Id and Game = :v_Game",
                 ExpressionAttributeValues = new Dictionary<string, AttributeValue> {
                                  { ":v_Id", new AttributeValue { S = user }},
                                  { ":v_Game", new AttributeValue { S = game}}
@@ -82,7 +82,7 @@ namespace dynamo_leaderboard_example
         {
             Console.WriteLine("GetMostRecentHighScoreForUser");
             // query using Local Secondary Index 
-            // partition key is UserId (default) and sort key is TimeStamp
+            // partition key is Username (default) and sort key is TimeStamp
             // note we specify indexName in the query
             // ScanIndexForward is false so results are descending
             // and Limit is 1 so we only get the single high score back
@@ -90,7 +90,7 @@ namespace dynamo_leaderboard_example
             {
                 TableName = "HighScores",
                 IndexName = "TimestampIndex",
-                KeyConditionExpression = "UserId = :v_Id",
+                KeyConditionExpression = "Username = :v_Id",
                 ExpressionAttributeValues = new Dictionary<string, AttributeValue> {
                                  { ":v_Id", new AttributeValue { S = user }},
                              },
@@ -105,15 +105,15 @@ namespace dynamo_leaderboard_example
         {
             Console.WriteLine("GetHighScoreForGame");
             // query using Global Secondary Index 
-            // partition key is GameTitle and sort key is TopScore
+            // partition key is Game and sort key is TopScore
             // note we specify indexName in the query
             // ScanIndexForward is false so results are descending
             // and Limit is 1 so we only get the single high score back
             var request = new QueryRequest
             {
                 TableName = "HighScores",
-                IndexName = "GameTitleIndex",
-                KeyConditionExpression = "GameTitle = :v_Game",
+                IndexName = "GameIndex",
+                KeyConditionExpression = "Game = :v_Game",
                 ExpressionAttributeValues = new Dictionary<string, AttributeValue> {
                                  { ":v_Game", new AttributeValue { S = game }},
                              },
@@ -133,12 +133,12 @@ namespace dynamo_leaderboard_example
             for (Int32 i = 0; i < numUsers; i++)
             {
                 string userName = RandomString(4);
-                foreach (string game in GameTitles)
+                foreach (string game in Games)
                 {
                     Int32 score = random.Next(scoreMin, scoreMax);
                     var entry = new Document();
-                    entry["UserId"] = userName;
-                    entry["GameTitle"] = game;
+                    entry["Username"] = userName;
+                    entry["Game"] = game;
                     entry["TopScore"] = score;
                     entry["Timestamp"] = DateTime.Now;
                     _ = table.PutItemAsync(entry).Result;
@@ -157,7 +157,7 @@ namespace dynamo_leaderboard_example
         {
             foreach (var item in items)
             {
-                string s = item["UserId"].S + " - " + item["GameTitle"].S + " - " + item["TopScore"].N;
+                string s = item["Username"].S + " - " + item["Game"].S + " - " + item["TopScore"].N;
                 if (hasTimestamp)
                     s += " - " + item["Timestamp"].S;
                 Console.WriteLine(s);
