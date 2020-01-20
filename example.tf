@@ -1,6 +1,6 @@
 provider "aws" {
   profile    = "adminuser"
-  region     = "us-east-2"
+  region     = "us-east-1"
 }
 
 resource "aws_dynamodb_table" "basic-dynamodb-table" {
